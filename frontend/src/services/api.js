@@ -1,14 +1,14 @@
 import axios from "axios";
 
-// Base API instance
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Request interceptor — attach JWT token to every request
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -20,12 +20,10 @@ api.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// Response interceptor — handle 401 globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid — clear and redirect
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.location.href = "/login";
@@ -34,21 +32,20 @@ api.interceptors.response.use(
   },
 );
 
-// Auth APIs
 export const loginUser = async (email, password) => {
   const response = await api.post("/login", { email, password });
   return response.data;
 };
 
-// Vaccine APIs
 export const submitVaccineRecord = async (formData) => {
   const response = await api.post("/submit", formData);
   return response.data;
 };
 
 export const getVaccineRecord = async (id) => {
-  // Public endpoint — no auth needed
-  const response = await axios.get(`/api/data/${id}`);
+  const backendUrl =
+    import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+  const response = await axios.get(`${backendUrl}/data/${id}`);
   return response.data;
 };
 

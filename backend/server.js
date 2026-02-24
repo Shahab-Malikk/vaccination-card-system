@@ -13,7 +13,11 @@ const PORT = process.env.PORT || 3001;
 // CORS — allow frontend origin
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:4173"],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:4173",
+      /\.vercel\.app$/, // ← allows any vercel.app subdomain
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
