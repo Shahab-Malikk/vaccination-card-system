@@ -1,7 +1,7 @@
 require("dotenv").config();
 const path = require("path");
 const fs = require("fs");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs"); // ← was 'bcrypt'
 
 // sql.js is pure JavaScript SQLite — no native compilation needed
 const initSqlJs = require("sql.js");
