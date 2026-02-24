@@ -1,0 +1,78 @@
+/* =============================================
+   PRINT STYLES — MDC Vaccination Card System
+   ============================================= */
+
+@media print {
+  /* Force landscape orientation */
+  @page {
+    size: A4 landscape !important;
+    margin: 8mm !important;
+  }
+
+  /* Hide EVERYTHING on the page except the slip */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Show only the slip and its children */
+  .vaccination-slip,
+  .vaccination-slip * {
+    visibility: visible !important;
+  }
+
+  /* Position slip at top-left of page */
+  .vaccination-slip {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    z-index: 9999 !important;
+
+    /* Force colors to print */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Hide modal chrome */
+  .modal-overlay,
+  .modal-header,
+  .modal-actions,
+  .modal-close-btn,
+  .navbar,
+  .dashboard-main {
+    display: none !important;
+  }
+
+  /* Ensure slip layout stays horizontal */
+  .slip-body {
+    display: grid !important;
+    grid-template-columns: 1fr 1.2fr !important;
+  }
+
+  /* Force background colors to print */
+  .slip-divider-red {
+    background: #c0392b !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .slip-vaccine-header {
+    background: #2c3e93 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .slip-logo-circle {
+    background: #2c3e93 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
