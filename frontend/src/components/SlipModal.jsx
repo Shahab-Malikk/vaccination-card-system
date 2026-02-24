@@ -4,21 +4,22 @@ import { useReactToPrint } from "react-to-print";
 const SlipModal = ({ record, onClose }) => {
   const printRef = useRef(null);
 
+  // v2.15.1 API — use content callback, NOT contentRef
   const handlePrint = useReactToPrint({
-    contentRef: printRef,
+    content: () => printRef.current,
     documentTitle: `Vaccination-Card-${record.id}`,
     pageStyle: `
-    @page {
-      size: A4 landscape !important;
-      margin: 8mm;
-    }
-    @media print {
-      body {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
+      @page {
+        size: A4 landscape !important;
+        margin: 8mm;
       }
-    }
-  `,
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+      }
+    `,
   });
 
   const formatDate = (dateStr) => {
@@ -41,7 +42,7 @@ const SlipModal = ({ record, onClose }) => {
           </button>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons — direct handlePrint call, no setTimeout needed */}
         <div className="modal-actions">
           <button onClick={handlePrint} className="btn-print">
             🖨️ Print Card
