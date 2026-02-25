@@ -9,11 +9,12 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Routes */}
+        {/* PUBLIC — no auth needed */}
         <Route path="/login" element={<Login />} />
-        <Route path="/view" element={<ViewSlip />} />
-
-        {/* Protected Routes */}
+        <Route path="/view" element={<ViewSlip />} />{" "}
+        {/* old — backward compat */}
+        <Route path="/verify" element={<ViewSlip />} /> {/* new QR route */}
+        {/* PROTECTED — requires JWT */}
         <Route
           path="/dashboard"
           element={
@@ -22,8 +23,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Default redirect */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

@@ -1,10 +1,15 @@
 const express = require("express");
+const { v4: uuidv4 } = require("uuid");
+const jwt = require("jsonwebtoken");
 const { dbGet, dbRun } = require("../db");
 const authMiddleware = require("../middleware/authMiddleware");
 const generateQR = require("../utils/generateQR");
 
 const router = express.Router();
 
+// ============================================================
+// POST /api/submit — Protected
+// ============================================================
 router.post("/submit", authMiddleware, async (req, res) => {
   try {
     const {
@@ -41,13 +46,17 @@ router.post("/submit", authMiddleware, async (req, res) => {
       return res.status(400).json({ message: "Validation failed", errors });
     }
 
-    // Insert record using helper
+    // Generate UUID for this record
+    const recordUuid = uuidv4();
+
+    // Insert record
     const { lastInsertRowid } = dbRun(
       `INSERT INTO vaccine_records 
-        (name, contact_number, passport_no, cnic, sdw_of, travelling_country, 
+        (uuid, name, contact_number, passport_no, cnic, sdw_of, travelling_country, 
          batch_no, expiry_date, vaccine_name, vaccine_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        recordUuid,
         name.trim(),
         contactNumber.trim(),
         passportNo.trim().toUpperCase(),
@@ -61,21 +70,19 @@ router.post("/submit", authMiddleware, async (req, res) => {
       ],
     );
 
-    const recordId = lastInsertRowid;
+    // Generate QR with signed JWT token
+    const qrCode = await generateQR(recordUuid);
 
-    // Generate QR
-    const qrCode = await generateQR(recordId);
-
-    // Save QR back to record
-    dbRun("UPDATE vaccine_records SET qr_code = ? WHERE id = ?", [
+    // Save QR to record
+    dbRun("UPDATE vaccine_records SET qr_code = ? WHERE uuid = ?", [
       qrCode,
-      recordId,
+      recordUuid,
     ]);
 
     res.status(201).json({
       message: "Vaccination record saved successfully",
       record: {
-        id: recordId,
+        id: recordUuid,
         name: name.trim(),
         contactNumber: contactNumber.trim(),
         passportNo: passportNo.trim().toUpperCase(),
@@ -98,16 +105,37 @@ router.post("/submit", authMiddleware, async (req, res) => {
   }
 });
 
-router.get("/data/:id", (req, res) => {
+// ============================================================
+// GET /api/verify?token=xxx — PUBLIC
+// QR code scans hit this endpoint
+// ============================================================
+router.get("/verify", (req, res) => {
   try {
-    const { id } = req.params;
+    const { token } = req.query;
 
-    if (!id || isNaN(Number(id))) {
-      return res.status(400).json({ message: "Invalid record ID." });
+    if (!token) {
+      return res.status(400).json({ message: "No token provided." });
     }
 
-    const record = dbGet("SELECT * FROM vaccine_records WHERE id = ?", [
-      Number(id),
+    // Verify and decode JWT
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      return res
+        .status(401)
+        .json({ message: "Invalid or expired verification token." });
+    }
+
+    const uuid = decoded.uid;
+
+    if (!uuid) {
+      return res.status(400).json({ message: "Invalid token payload." });
+    }
+
+    // Fetch record by UUID
+    const record = dbGet("SELECT * FROM vaccine_records WHERE uuid = ?", [
+      uuid,
     ]);
 
     if (!record) {
@@ -116,7 +144,7 @@ router.get("/data/:id", (req, res) => {
 
     res.json({
       record: {
-        id: record.id,
+        id: record.uuid,
         name: record.name,
         contactNumber: record.contact_number,
         passportNo: record.passport_no,
@@ -132,7 +160,50 @@ router.get("/data/:id", (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Fetch error:", err);
+    console.error("Verify error:", err);
+    res.status(500).json({ message: "Failed to verify record." });
+  }
+});
+
+// ============================================================
+// GET /api/data/:uuid — PUBLIC (kept for backward compatibility)
+// ============================================================
+router.get("/data/:uuid", (req, res) => {
+  try {
+    const { uuid } = req.params;
+
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(uuid)) {
+      return res.status(400).json({ message: "Invalid record ID." });
+    }
+
+    const record = dbGet("SELECT * FROM vaccine_records WHERE uuid = ?", [
+      uuid,
+    ]);
+
+    if (!record) {
+      return res.status(404).json({ message: "Vaccination record not found." });
+    }
+
+    res.json({
+      record: {
+        id: record.uuid,
+        name: record.name,
+        contactNumber: record.contact_number,
+        passportNo: record.passport_no,
+        cnic: record.cnic,
+        sdwOf: record.sdw_of,
+        travellingCountry: record.travelling_country,
+        batchNo: record.batch_no,
+        expiryDate: record.expiry_date,
+        vaccineName: record.vaccine_name,
+        vaccineDate: record.vaccine_date,
+        qrCode: record.qr_code,
+        createdAt: record.created_at,
+      },
+    });
+  } catch (err) {
     res.status(500).json({ message: "Failed to retrieve record." });
   }
 });

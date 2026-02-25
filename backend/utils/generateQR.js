@@ -1,24 +1,27 @@
 const QRCode = require("qrcode");
+const jwt = require("jsonwebtoken");
 
-/**
- * Generate QR code as a Base64 data URL.
- * Encodes the public view URL with the record ID.
- *
- * @param {number|string} recordId - The unique database record ID
- * @returns {Promise<string>} - Base64 data URL (data:image/png;base64,...)
- */
-const generateQR = async (recordId) => {
+const generateQR = async (uuid) => {
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-  const viewUrl = `${frontendUrl}/view?id=${recordId}`;
+
+  // Sign JWT token with UUID inside — hides actual ID
+  const token = jwt.sign({ uid: uuid }, process.env.JWT_SECRET, {
+    expiresIn: "10y",
+  });
+
+  // /verify route reveals nothing about the system
+  const viewUrl = `${frontendUrl}/verify?token=${token}`;
+
+  console.log("QR URL generated:", viewUrl);
 
   const qrDataUrl = await QRCode.toDataURL(viewUrl, {
-    errorCorrectionLevel: "M", // Medium correction level
+    errorCorrectionLevel: "M",
     type: "image/png",
-    width: 200, // 200x200 pixels
-    margin: 2, // Small quiet zone
+    width: 200,
+    margin: 2,
     color: {
-      dark: "#1a1a2e", // Dark navy dots
-      light: "#ffffff", // White background
+      dark: "#1a1a2e",
+      light: "#ffffff",
     },
   });
 

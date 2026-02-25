@@ -1,25 +1,17 @@
 require("dotenv").config();
 const path = require("path");
 const fs = require("fs");
-const bcrypt = require("bcryptjs"); // ← was 'bcrypt'
+const bcrypt = require("bcryptjs");
 
-// sql.js is pure JavaScript SQLite — no native compilation needed
 const initSqlJs = require("sql.js");
 
 const DB_PATH = path.join(__dirname, "database.sqlite");
 
-// Hold the db instance (loaded async)
 let db = null;
 
-/**
- * Initialize sql.js database.
- * Loads existing .sqlite file from disk if it exists,
- * otherwise creates a fresh database.
- */
 const initDB = async () => {
   const SQL = await initSqlJs();
 
-  // Load existing DB file from disk if it exists
   if (fs.existsSync(DB_PATH)) {
     const fileBuffer = fs.readFileSync(DB_PATH);
     db = new SQL.Database(fileBuffer);
@@ -27,7 +19,7 @@ const initDB = async () => {
     db = new SQL.Database();
   }
 
-  // Create tables
+  // Users table
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,9 +29,11 @@ const initDB = async () => {
     )
   `);
 
+  // Vaccine records table — with uuid column
   db.run(`
     CREATE TABLE IF NOT EXISTS vaccine_records (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      uuid TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
       contact_number TEXT NOT NULL,
       passport_no TEXT NOT NULL,
@@ -55,28 +49,18 @@ const initDB = async () => {
     )
   `);
 
-  // Save to disk after table creation
   saveToDisk();
-
-  // Seed admin user
   await seedAdminUser();
 
   console.log("✅ Database initialized successfully");
 };
 
-/**
- * Save in-memory database back to disk.
- * Must be called after every write operation.
- */
 const saveToDisk = () => {
   const data = db.export();
   const buffer = Buffer.from(data);
   fs.writeFileSync(DB_PATH, buffer);
 };
 
-/**
- * Seed initial admin user if not exists.
- */
 const seedAdminUser = async () => {
   const email = process.env.SEED_EMAIL || "admin@mdc.com";
   const password = process.env.SEED_PASSWORD || "Admin@MDC2024";
@@ -89,19 +73,14 @@ const seedAdminUser = async () => {
   }
 
   const hashedPassword = await bcrypt.hash(password, 12);
-
   db.run(`INSERT INTO users (email, password) VALUES (?, ?)`, [
     email,
     hashedPassword,
   ]);
-
   saveToDisk();
   console.log(`✅ Admin user seeded: ${email}`);
 };
 
-/**
- * Helper: run a SELECT and return array of row objects
- */
 const dbAll = (sql, params = []) => {
   try {
     const stmt = db.prepare(sql);
@@ -118,18 +97,11 @@ const dbAll = (sql, params = []) => {
   }
 };
 
-/**
- * Helper: run a SELECT and return single row object or null
- */
 const dbGet = (sql, params = []) => {
   const rows = dbAll(sql, params);
   return rows.length > 0 ? rows[0] : null;
 };
 
-/**
- * Helper: run INSERT/UPDATE/DELETE
- * Returns { lastInsertRowid, changes }
- */
 const dbRun = (sql, params = []) => {
   db.run(sql, params);
   const lastInsertRowid = db.exec("SELECT last_insert_rowid() as id")[0]
