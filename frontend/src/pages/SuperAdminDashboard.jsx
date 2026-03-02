@@ -11,6 +11,7 @@ import {
   getBatches,
   createBatch,
   deleteBatch,
+  changePassword,
 } from "../services/api";
 
 const SuperAdminDashboard = () => {
@@ -40,6 +41,18 @@ const SuperAdminDashboard = () => {
     expiryDate: "",
   });
   const [batchLoading, setBatchLoading] = useState(false);
+
+  // Password change state
+  const [pwForm, setPwForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [pwErrors, setPwErrors] = useState({});
+  const [pwLoading, setPwLoading] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -98,10 +111,10 @@ const SuperAdminDashboard = () => {
     try {
       if (editingCenter) {
         await updateCenter(editingCenter.uuid, centerForm);
-        setSuccess("Center updated successfully!");
+        showMsg("Center updated successfully!");
       } else {
         await createCenter(centerForm);
-        setSuccess("Center created successfully!");
+        showMsg("Center created successfully!");
       }
       setCenterForm({ name: "", logo: "", footer: "" });
       setShowCenterForm(false);
@@ -126,7 +139,7 @@ const SuperAdminDashboard = () => {
     if (!window.confirm("Delete this center? This cannot be undone.")) return;
     try {
       await deleteCenter(uuid);
-      setSuccess("Center deleted.");
+      showMsg("Center deleted.");
       fetchCenters();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to delete center.");
@@ -152,7 +165,7 @@ const SuperAdminDashboard = () => {
         email: form.email,
         password: form.password,
       });
-      setSuccess("User created successfully!");
+      showMsg("User created successfully!");
       setShowUserForm((prev) => ({ ...prev, [centerUuid]: false }));
       await fetchCenterUser(centerUuid);
     } catch (err) {
@@ -164,7 +177,7 @@ const SuperAdminDashboard = () => {
     if (!window.confirm("Delete this user?")) return;
     try {
       await deleteCenterUser(centerUuid);
-      setSuccess("User deleted.");
+      showMsg("User deleted.");
       setCenterUsers((prev) => ({ ...prev, [centerUuid]: null }));
     } catch (err) {
       setError("Failed to delete user.");
@@ -176,7 +189,7 @@ const SuperAdminDashboard = () => {
     setError("");
     try {
       await createBatch(batchForm);
-      setSuccess("Batch added successfully!");
+      showMsg("Batch added successfully!");
       setBatchForm({ vaccineName: "", batchNo: "", expiryDate: "" });
       fetchBatches();
     } catch (err) {
@@ -188,10 +201,42 @@ const SuperAdminDashboard = () => {
     if (!window.confirm("Delete this batch?")) return;
     try {
       await deleteBatch(uuid);
-      setSuccess("Batch deleted.");
+      showMsg("Batch deleted.");
       fetchBatches();
     } catch (err) {
       setError("Failed to delete batch.");
+    }
+  };
+
+  // Password change handler
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setPwErrors({});
+    setError("");
+
+    const errors = {};
+    if (!pwForm.currentPassword) errors.currentPassword = "Required";
+    if (!pwForm.newPassword) errors.newPassword = "Required";
+    else if (pwForm.newPassword.length < 6)
+      errors.newPassword = "Min 6 characters";
+    if (!pwForm.confirmPassword) errors.confirmPassword = "Required";
+    else if (pwForm.newPassword !== pwForm.confirmPassword)
+      errors.confirmPassword = "Passwords do not match";
+
+    if (Object.keys(errors).length > 0) {
+      setPwErrors(errors);
+      return;
+    }
+
+    setPwLoading(true);
+    try {
+      await changePassword(pwForm.currentPassword, pwForm.newPassword);
+      showMsg("Password changed successfully!");
+      setPwForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to change password.");
+    } finally {
+      setPwLoading(false);
     }
   };
 
@@ -201,13 +246,9 @@ const SuperAdminDashboard = () => {
     navigate("/login");
   };
 
-  const showMsg = (msg, isError = false) => {
-    if (isError) setError(msg);
-    else setSuccess(msg);
-    setTimeout(() => {
-      setError("");
-      setSuccess("");
-    }, 3000);
+  const showMsg = (msg) => {
+    setSuccess(msg);
+    setTimeout(() => setSuccess(""), 3000);
   };
 
   return (
@@ -242,6 +283,12 @@ const SuperAdminDashboard = () => {
           >
             💉 Vaccine Batches
           </button>
+          <button
+            style={activeTab === "settings" ? s.tabActive : s.tab}
+            onClick={() => setActiveTab("settings")}
+          >
+            ⚙️ Settings
+          </button>
         </div>
 
         {/* ===== CENTERS TAB ===== */}
@@ -261,7 +308,6 @@ const SuperAdminDashboard = () => {
               </button>
             </div>
 
-            {/* Center Form */}
             {showCenterForm && (
               <div style={s.formCard}>
                 <h3 style={s.formTitle}>
@@ -303,7 +349,7 @@ const SuperAdminDashboard = () => {
                     {centerForm.logo && (
                       <img
                         src={centerForm.logo}
-                        alt="Logo preview"
+                        alt="preview"
                         style={{
                           width: 80,
                           height: 80,
@@ -334,7 +380,6 @@ const SuperAdminDashboard = () => {
               </div>
             )}
 
-            {/* Centers List */}
             {centerLoading ? (
               <div style={s.loading}>Loading centers...</div>
             ) : centers.length === 0 ? (
@@ -345,7 +390,6 @@ const SuperAdminDashboard = () => {
               <div style={s.centerList}>
                 {centers.map((center) => (
                   <div key={center.uuid} style={s.centerCard}>
-                    {/* Center Header Row */}
                     <div style={s.centerRow}>
                       <div style={s.centerInfo}>
                         {center.logo && (
@@ -392,11 +436,9 @@ const SuperAdminDashboard = () => {
                       </div>
                     </div>
 
-                    {/* Expanded — User Management */}
                     {expandedCenter === center.uuid && (
                       <div style={s.userSection}>
                         <h4 style={s.userSectionTitle}>Center Login User</h4>
-
                         {centerUsers[center.uuid] ? (
                           <div style={s.userCard}>
                             <div>
@@ -499,7 +541,6 @@ const SuperAdminDashboard = () => {
               <h2 style={s.sectionTitle}>Global Vaccine Batches</h2>
             </div>
 
-            {/* Add Batch Form */}
             <div style={s.formCard}>
               <h3 style={s.formTitle}>Add New Batch</h3>
               <form onSubmit={handleBatchSubmit}>
@@ -555,7 +596,6 @@ const SuperAdminDashboard = () => {
               </form>
             </div>
 
-            {/* Batches Table */}
             {batchLoading ? (
               <div style={s.loading}>Loading batches...</div>
             ) : batches.length === 0 ? (
@@ -597,12 +637,148 @@ const SuperAdminDashboard = () => {
             )}
           </div>
         )}
+
+        {/* ===== SETTINGS TAB ===== */}
+        {activeTab === "settings" && (
+          <div>
+            <div style={s.sectionHeader}>
+              <h2 style={s.sectionTitle}>Settings</h2>
+            </div>
+
+            <div style={s.formCard}>
+              <h3 style={s.formTitle}>🔒 Change Password</h3>
+              <p
+                style={{
+                  color: "#7a7a9a",
+                  fontSize: 13,
+                  marginBottom: 20,
+                  marginTop: -8,
+                }}
+              >
+                Update your super admin password.
+              </p>
+
+              <form onSubmit={handlePasswordChange} noValidate>
+                <div style={{ maxWidth: 420 }}>
+                  {/* Current Password */}
+                  <div style={s.formGroup}>
+                    <label style={s.label}>Current Password *</label>
+                    <div style={s.pwWrapper}>
+                      <input
+                        style={pwInp(pwErrors.currentPassword)}
+                        type={showCurrentPw ? "text" : "password"}
+                        value={pwForm.currentPassword}
+                        onChange={(e) => {
+                          setPwForm((p) => ({
+                            ...p,
+                            currentPassword: e.target.value,
+                          }));
+                          setPwErrors((p) => ({ ...p, currentPassword: "" }));
+                        }}
+                        placeholder="Enter current password"
+                      />
+                      <button
+                        type="button"
+                        style={s.pwToggle}
+                        onClick={() => setShowCurrentPw(!showCurrentPw)}
+                      >
+                        {showCurrentPw ? "🙈" : "👁️"}
+                      </button>
+                    </div>
+                    {pwErrors.currentPassword && (
+                      <span style={s.fieldErr}>{pwErrors.currentPassword}</span>
+                    )}
+                  </div>
+
+                  {/* New Password */}
+                  <div style={s.formGroup}>
+                    <label style={s.label}>New Password *</label>
+                    <div style={s.pwWrapper}>
+                      <input
+                        style={pwInp(pwErrors.newPassword)}
+                        type={showNewPw ? "text" : "password"}
+                        value={pwForm.newPassword}
+                        onChange={(e) => {
+                          setPwForm((p) => ({
+                            ...p,
+                            newPassword: e.target.value,
+                          }));
+                          setPwErrors((p) => ({ ...p, newPassword: "" }));
+                        }}
+                        placeholder="Min 6 characters"
+                      />
+                      <button
+                        type="button"
+                        style={s.pwToggle}
+                        onClick={() => setShowNewPw(!showNewPw)}
+                      >
+                        {showNewPw ? "🙈" : "👁️"}
+                      </button>
+                    </div>
+                    {pwErrors.newPassword && (
+                      <span style={s.fieldErr}>{pwErrors.newPassword}</span>
+                    )}
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div style={s.formGroup}>
+                    <label style={s.label}>Confirm New Password *</label>
+                    <div style={s.pwWrapper}>
+                      <input
+                        style={pwInp(pwErrors.confirmPassword)}
+                        type={showConfirmPw ? "text" : "password"}
+                        value={pwForm.confirmPassword}
+                        onChange={(e) => {
+                          setPwForm((p) => ({
+                            ...p,
+                            confirmPassword: e.target.value,
+                          }));
+                          setPwErrors((p) => ({ ...p, confirmPassword: "" }));
+                        }}
+                        placeholder="Repeat new password"
+                      />
+                      <button
+                        type="button"
+                        style={s.pwToggle}
+                        onClick={() => setShowConfirmPw(!showConfirmPw)}
+                      >
+                        {showConfirmPw ? "🙈" : "👁️"}
+                      </button>
+                    </div>
+                    {pwErrors.confirmPassword && (
+                      <span style={s.fieldErr}>{pwErrors.confirmPassword}</span>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    style={s.btnPrimary}
+                    disabled={pwLoading}
+                  >
+                    {pwLoading ? "Updating..." : "🔒 Update Password"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-GB") : "N/A");
+const pwInp = (err) => ({
+  width: "100%",
+  padding: "10px 44px 10px 13px",
+  border: `1.5px solid ${err ? "#c0392b" : "#e0e4f0"}`,
+  borderRadius: 7,
+  fontSize: 14,
+  outline: "none",
+  boxSizing: "border-box",
+  fontFamily: "inherit",
+  background: err ? "#fff9f9" : "white",
+});
 
 const s = {
   page: {
@@ -869,6 +1045,19 @@ const s = {
     fontSize: 14,
     color: "#1a1a2e",
   },
+  pwWrapper: { position: "relative", display: "flex", alignItems: "center" },
+  pwToggle: {
+    position: "absolute",
+    right: 10,
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    fontSize: 17,
+    padding: "0 4px",
+    color: "#7a7a9a",
+    userSelect: "none",
+  },
+  fieldErr: { color: "#c0392b", fontSize: 12, marginTop: 4, display: "block" },
 };
 
 export default SuperAdminDashboard;

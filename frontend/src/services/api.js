@@ -113,4 +113,13 @@ export const deleteBatch = async (uuid) => {
   return response.data;
 };
 
+// Add this to existing api.js
+export const changePassword = async (currentPassword, newPassword) => {
+  const response = await api.post("/change-password", {
+    currentPassword,
+    newPassword,
+  });
+  return response.data;
+};
+
 export default api;
