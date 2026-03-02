@@ -4,24 +4,18 @@ const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
 const api = axios.create({
   baseURL: BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  headers: { "Content-Type": "application/json" },
 });
 
-// Attach JWT token to every protected request
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
   (error) => Promise.reject(error),
 );
 
-// Handle 401 globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -34,33 +28,88 @@ api.interceptors.response.use(
   },
 );
 
-// Login
+// ===== AUTH =====
 export const loginUser = async (email, password) => {
   const response = await api.post("/login", { email, password });
   return response.data;
 };
 
-// Submit vaccination record
+// ===== VACCINE RECORDS =====
 export const submitVaccineRecord = async (formData) => {
   const response = await api.post("/submit", formData);
   return response.data;
 };
 
-// Old — lookup by UUID directly (backward compat)
-export const getVaccineRecord = async (id) => {
-  const backendUrl =
-    import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-  const response = await axios.get(`${backendUrl}/data/${id}`);
+export const getMyRecords = async () => {
+  const response = await api.get("/records");
   return response.data;
 };
 
-// New — verify by signed JWT token from QR code
+export const updateRecord = async (uuid, formData) => {
+  const response = await api.put(`/records/${uuid}`, formData);
+  return response.data;
+};
+
+// ===== PUBLIC VERIFY =====
 export const verifyVaccineToken = async (token) => {
   const backendUrl =
     import.meta.env.VITE_API_URL || "http://localhost:3001/api";
   const response = await axios.get(
     `${backendUrl}/verify?token=${encodeURIComponent(token)}`,
   );
+  return response.data;
+};
+
+// ===== ADMIN — CENTERS =====
+export const getCenters = async () => {
+  const response = await api.get("/admin/centers");
+  return response.data;
+};
+
+export const createCenter = async (data) => {
+  const response = await api.post("/admin/centers", data);
+  return response.data;
+};
+
+export const updateCenter = async (uuid, data) => {
+  const response = await api.put(`/admin/centers/${uuid}`, data);
+  return response.data;
+};
+
+export const deleteCenter = async (uuid) => {
+  const response = await api.delete(`/admin/centers/${uuid}`);
+  return response.data;
+};
+
+// ===== ADMIN — CENTER USERS =====
+export const getCenterUser = async (centerUuid) => {
+  const response = await api.get(`/admin/centers/${centerUuid}/user`);
+  return response.data;
+};
+
+export const createCenterUser = async (centerUuid, data) => {
+  const response = await api.post(`/admin/centers/${centerUuid}/user`, data);
+  return response.data;
+};
+
+export const deleteCenterUser = async (centerUuid) => {
+  const response = await api.delete(`/admin/centers/${centerUuid}/user`);
+  return response.data;
+};
+
+// ===== ADMIN — VACCINE BATCHES =====
+export const getBatches = async () => {
+  const response = await api.get("/admin/batches");
+  return response.data;
+};
+
+export const createBatch = async (data) => {
+  const response = await api.post("/admin/batches", data);
+  return response.data;
+};
+
+export const deleteBatch = async (uuid) => {
+  const response = await api.delete(`/admin/batches/${uuid}`);
   return response.data;
 };
 
