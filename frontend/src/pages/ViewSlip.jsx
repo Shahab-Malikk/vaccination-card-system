@@ -1,13 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { getVaccineRecord, verifyVaccineToken } from "../services/api";
+import { verifyVaccineToken } from "../services/api";
 
 const ViewSlip = () => {
   const [searchParams] = useSearchParams();
-
-  // Support both ?token= (new) and ?id= (old)
   const token = searchParams.get("token");
-  const id = searchParams.get("id");
 
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,21 +12,13 @@ const ViewSlip = () => {
 
   useEffect(() => {
     const fetchRecord = async () => {
+      if (!token) {
+        setError("Invalid verification link.");
+        setLoading(false);
+        return;
+      }
       try {
-        let data;
-
-        if (token) {
-          // New QR format — verify signed JWT token
-          data = await verifyVaccineToken(token);
-        } else if (id) {
-          // Old format — direct UUID lookup
-          data = await getVaccineRecord(id);
-        } else {
-          setError("Invalid verification link.");
-          setLoading(false);
-          return;
-        }
-
+        const data = await verifyVaccineToken(token);
         setRecord(data.record);
       } catch (err) {
         setError(
@@ -41,9 +30,8 @@ const ViewSlip = () => {
         setLoading(false);
       }
     };
-
     fetchRecord();
-  }, [token, id]);
+  }, [token]);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "N/A";
@@ -90,6 +78,8 @@ const ViewSlip = () => {
     );
   }
 
+  const center = record.center || {};
+
   // Success
   return (
     <div style={styles.page}>
@@ -101,25 +91,31 @@ const ViewSlip = () => {
         .view-card { animation: fadeIn 0.4s ease; }
         @media (max-width: 600px) {
           .info-grid { grid-template-columns: 1fr !important; }
-          .card-header { 
-            flex-direction: column !important; 
-            gap: 12px !important; 
-            text-align: center !important; 
+          .card-header {
+            flex-direction: column !important;
+            gap: 12px !important;
+            text-align: center !important;
           }
-          .vaccine-table th, .vaccine-table td { 
-            padding: 8px 6px !important; 
-            font-size: 12px !important; 
+          .vaccine-table th, .vaccine-table td {
+            padding: 8px 6px !important;
+            font-size: 12px !important;
           }
         }
       `}</style>
 
       <div className="view-card" style={styles.card}>
-        {/* Header */}
+        {/* Header — center branding */}
         <div className="card-header" style={styles.header}>
           <div style={styles.headerLeft}>
-            <div style={styles.logoCircleWhite}>MDC</div>
+            {center.logo ? (
+              <img src={center.logo} alt="logo" style={styles.centerLogo} />
+            ) : (
+              <div style={styles.logoCircleWhite}>MDC</div>
+            )}
             <div>
-              <h1 style={styles.headerTitle}>MAHNOOR DIAGNOSTIC CENTRE</h1>
+              <h1 style={styles.headerTitle}>
+                {center.name || "MAHNOOR DIAGNOSTIC CENTRE"}
+              </h1>
               <p style={styles.headerSub}>Vaccination Verification Card</p>
             </div>
           </div>
@@ -134,9 +130,11 @@ const ViewSlip = () => {
           <h3 style={styles.sectionTitle}>👤 Personal Information</h3>
           <div className="info-grid" style={styles.infoGrid}>
             <InfoItem label="Full Name" value={record.name} />
-            <InfoItem label="Contact Number" value={record.contactNumber} />
+            {record.contactNumber && (
+              <InfoItem label="Contact Number" value={record.contactNumber} />
+            )}
             <InfoItem label="Passport No" value={record.passportNo} />
-            <InfoItem label="CNIC" value={record.cnic} />
+            {record.cnic && <InfoItem label="CNIC" value={record.cnic} />}
             <InfoItem label="S/D/W of" value={record.sdwOf} />
             <InfoItem
               label="Travelling Country"
@@ -155,7 +153,7 @@ const ViewSlip = () => {
                   <th style={styles.th}>Vaccine Name</th>
                   <th style={styles.th}>Vaccine Date</th>
                   <th style={styles.th}>Batch No</th>
-                  <th style={styles.th}>Expiry Date</th>
+                  {record.expiryDate && <th style={styles.th}>Expiry Date</th>}
                 </tr>
               </thead>
               <tbody>
@@ -165,22 +163,25 @@ const ViewSlip = () => {
                   </td>
                   <td style={styles.td}>{formatDate(record.vaccineDate)}</td>
                   <td style={styles.td}>{record.batchNo}</td>
-                  <td style={styles.td}>{formatDate(record.expiryDate)}</td>
+                  {record.expiryDate && (
+                    <td style={styles.td}>{formatDate(record.expiryDate)}</td>
+                  )}
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer — center footer */}
         <div style={styles.footer}>
           <div>
-            <p style={styles.footerText}>
-              📍 378-Saidpur Road, Satellite Town, Rawalpindi
-            </p>
-            <p style={styles.footerText}>
-              📞 +92 51 84 34 029 | support@mdc.net.pk
-            </p>
+            {center.footer ? (
+              <p style={styles.footerText}>📍 {center.footer}</p>
+            ) : (
+              <p style={styles.footerText}>
+                📍 378-Saidpur Road, Satellite Town, Rawalpindi
+              </p>
+            )}
           </div>
           <div style={styles.recordId}>✓ Verified Record</div>
         </div>
@@ -192,7 +193,7 @@ const ViewSlip = () => {
 const InfoItem = ({ label, value }) => (
   <div style={styles.infoItem}>
     <span style={styles.infoLabel}>{label}</span>
-    <span style={styles.infoValue}>{value}</span>
+    <span style={styles.infoValue}>{value || "—"}</span>
   </div>
 );
 
@@ -225,6 +226,14 @@ const styles = {
     gap: "12px",
   },
   headerLeft: { display: "flex", alignItems: "center", gap: "14px" },
+  centerLogo: {
+    width: "54px",
+    height: "54px",
+    objectFit: "contain",
+    borderRadius: "8px",
+    background: "white",
+    padding: "4px",
+  },
   logoCircleWhite: {
     width: "54px",
     height: "54px",
