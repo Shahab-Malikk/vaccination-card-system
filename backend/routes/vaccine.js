@@ -8,6 +8,42 @@ const generateQR = require("../utils/generateQR");
 const router = express.Router();
 
 // ============================================================
+// GET /api/records/search?q=xxx — Center admin search
+// Search by CNIC or Passport No
+// ============================================================
+router.get("/records/search", authMiddleware, (req, res) => {
+  try {
+    if (req.user.role !== "center_admin") {
+      return res.status(403).json({ message: "Access denied." });
+    }
+
+    const { q } = req.query;
+    if (!q || q.trim().length < 2) {
+      return res.status(400).json({ message: "Search query too short." });
+    }
+
+    const centerId = req.user.centerId;
+    const search = `%${q.trim()}%`;
+
+    const records = dbAll(
+      `SELECT * FROM vaccine_records 
+       WHERE center_id = ? 
+       AND (
+         UPPER(passport_no) LIKE UPPER(?) 
+         OR cnic LIKE ?
+       )
+       ORDER BY created_at DESC`,
+      [centerId, search, search],
+    );
+
+    res.json({ records: records.map(mapRecord) });
+  } catch (err) {
+    console.error("Search error:", err);
+    res.status(500).json({ message: "Search failed." });
+  }
+});
+
+// ============================================================
 // POST /api/submit — Center admin only
 // ============================================================
 router.post("/submit", authMiddleware, async (req, res) => {

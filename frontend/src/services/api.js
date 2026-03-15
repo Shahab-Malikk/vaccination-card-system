@@ -122,4 +122,12 @@ export const changePassword = async (currentPassword, newPassword) => {
   return response.data;
 };
 
+// Search records by CNIC or Passport No
+export const searchRecords = async (query) => {
+  const response = await api.get(
+    `/records/search?q=${encodeURIComponent(query)}`,
+  );
+  return response.data;
+};
+
 export default api;

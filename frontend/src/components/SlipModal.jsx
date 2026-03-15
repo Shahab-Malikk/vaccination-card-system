@@ -25,7 +25,7 @@ const SlipModal = ({ record, onClose }) => {
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
-            @page { size: A4 landscape; margin: 8mm; }
+            @page { size: A4 portrait; margin: 10mm; }
             @media print { body { padding: 0; } }
             .slip { border: 2px solid #e0e4f0; border-radius: 8px; background: white; overflow: hidden; max-width: 900px; margin: 0 auto; }
             .slip-header { padding: 16px 22px; display: flex; justify-content: space-between; align-items: center; background: white; }
@@ -402,13 +402,15 @@ const slip = {
     height: 5,
     background: "linear-gradient(90deg, #c0392b, #922b21)",
   },
+  // In slip styles object change:
   body: {
     display: "grid",
-    gridTemplateColumns: "1fr 1.4fr",
+    gridTemplateColumns: "1fr", // ← single column for portrait
   },
   personal: {
     padding: "14px 18px",
-    borderRight: "1px solid #e0e4f0",
+    borderRight: "none", // ← remove side border
+    borderBottom: "1px solid #e0e4f0", // ← add bottom border instead
     minWidth: 0,
   },
   vaccine: {
