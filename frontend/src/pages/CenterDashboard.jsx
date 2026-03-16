@@ -259,7 +259,11 @@ const CenterDashboard = () => {
     list.map((record) => (
       <tr
         key={record.id}
-        style={editingRecord?.id === record.id ? { background: "#eaf2ff" } : {}}
+        style={
+          editingRecord?.id === record.id
+            ? { background: "#eaf2ff" }
+            : { background: "white" }
+        }
       >
         <td style={s.td}>
           <strong>{record.name}</strong>
@@ -432,7 +436,7 @@ const CenterDashboard = () => {
           </div>
         )}
 
-        {/* Tabs — only 2 now */}
+        {/* Tabs */}
         <div style={s.tabs}>
           <button
             style={activeTab === "form" ? s.tabActive : s.tab}
@@ -457,72 +461,107 @@ const CenterDashboard = () => {
         {/* ===== NEW RECORD TAB ===== */}
         {activeTab === "form" && (
           <div>
-            {/* SEARCH BOX */}
+            {/* ── SEARCH CARD ── */}
             <div style={s.searchCard}>
-              <div style={s.searchTitle}>🔍 Find Existing Record</div>
-              <p style={s.searchSub}>Search by CNIC or Passport Number</p>
-              <form onSubmit={handleSearch} noValidate>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <input
-                    style={{
-                      ...inp(),
-                      flex: 1,
-                      fontSize: 14,
-                      padding: "11px 14px",
-                    }}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setSearchError("");
-                      if (!e.target.value) {
-                        setSearchResults([]);
-                        setSearchDone(false);
-                        setEditingRecord(null);
-                      }
-                    }}
-                    placeholder="Enter CNIC (12345-1234567-1) or Passport No..."
-                  />
-                  <button
-                    type="submit"
-                    style={{ ...s.btnPrimary, padding: "11px 22px" }}
-                    disabled={searchLoading}
-                  >
-                    {searchLoading ? "⏳" : "🔍 Search"}
-                  </button>
-                  {searchDone && (
+              {/* Padded top section */}
+              <div style={{ padding: "22px 28px 18px" }}>
+                <div style={s.searchTitle}>🔍 Find Existing Record</div>
+                <p style={s.searchSub}>Search by CNIC or Passport Number</p>
+                <form onSubmit={handleSearch} noValidate>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <input
+                      style={{
+                        ...inp(),
+                        flex: 1,
+                        fontSize: 14,
+                        padding: "11px 14px",
+                      }}
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setSearchError("");
+                        if (!e.target.value) {
+                          setSearchResults([]);
+                          setSearchDone(false);
+                          setEditingRecord(null);
+                        }
+                      }}
+                      placeholder="Enter CNIC (12345-1234567-1) or Passport No..."
+                    />
                     <button
-                      type="button"
-                      style={s.btnSecondary}
-                      onClick={handleClearSearch}
+                      type="submit"
+                      style={{ ...s.btnPrimary, padding: "11px 22px" }}
+                      disabled={searchLoading}
                     >
-                      ✕ Clear
+                      {searchLoading ? "⏳" : "🔍 Search"}
                     </button>
-                  )}
-                </div>
-                {searchError && (
-                  <div style={{ color: "#c0392b", fontSize: 13, marginTop: 8 }}>
-                    {searchError}
+                    {searchDone && (
+                      <button
+                        type="button"
+                        style={s.btnSecondary}
+                        onClick={handleClearSearch}
+                      >
+                        ✕ Clear
+                      </button>
+                    )}
                   </div>
-                )}
-              </form>
+                  {searchError && (
+                    <div
+                      style={{ color: "#c0392b", fontSize: 13, marginTop: 8 }}
+                    >
+                      {searchError}
+                    </div>
+                  )}
+                </form>
+              </div>
 
               {/* Search Results */}
               {searchDone && (
-                <div style={{ marginTop: 16 }}>
+                <div>
                   {searchResults.length === 0 ? (
-                    <div style={s.searchEmpty}>
+                    <div
+                      style={{
+                        margin: "0 28px 22px",
+                        background: "#f8faff",
+                        borderRadius: 8,
+                        padding: 16,
+                        textAlign: "center",
+                        color: "#7a7a9a",
+                        fontSize: 14,
+                      }}
+                    >
                       No records found for <strong>"{searchQuery}"</strong>
                     </div>
                   ) : (
                     <div>
-                      <div style={s.searchResultCount}>
+                      {/* Result count */}
+                      <div
+                        style={{
+                          padding: "0 28px 10px",
+                          fontSize: 13,
+                          color: "#4a4a6a",
+                        }}
+                      >
                         {searchResults.length} record
                         {searchResults.length > 1 ? "s" : ""} found for{" "}
                         <strong>"{searchQuery}"</strong>
                       </div>
-                      <div style={{ ...s.tableWrapper, marginTop: 8 }}>
-                        <table style={{ ...s.table, minWidth: 600 }}>
+
+                      {/* Full width table */}
+                      <div
+                        style={{
+                          borderTop: "1px solid #e8f0ff",
+                          overflowX: "auto",
+                        }}
+                      >
+                        <table
+                          style={{
+                            width: "100%",
+                            borderCollapse: "collapse",
+                            minWidth: 650,
+                          }}
+                        >
                           <thead>
                             <tr>
                               <th style={s.th}>Patient Name</th>
@@ -530,6 +569,7 @@ const CenterDashboard = () => {
                               <th style={s.th}>CNIC</th>
                               <th style={s.th}>Vaccine</th>
                               <th style={s.th}>Date</th>
+                              <th style={s.th}>Country</th>
                               <th style={s.th}>Actions</th>
                             </tr>
                           </thead>
@@ -554,7 +594,7 @@ const CenterDashboard = () => {
               <div style={s.dividerLine}></div>
             </div>
 
-            {/* NEW RECORD FORM */}
+            {/* ── NEW RECORD FORM ── */}
             <div style={s.formCard}>
               <h2 style={s.formTitle}>New Vaccination Record</h2>
               <form onSubmit={handleSubmit} noValidate>
@@ -684,7 +724,7 @@ const CenterDashboard = () => {
         {/* ===== ALL RECORDS TAB ===== */}
         {activeTab === "records" && (
           <div>
-            {/* Edit form — only when editing from records */}
+            {/* Edit form — only when editing from records tab */}
             {editingRecord && editSource === "records" && renderEditForm()}
 
             <div style={s.sectionHeader}>
@@ -745,7 +785,7 @@ const CenterDashboard = () => {
   );
 };
 
-// ===== REUSABLE COMPONENTS =====
+// ===== REUSABLE FIELD =====
 const Field = ({ label, error, children }) => (
   <div style={{ marginBottom: 4 }}>
     <label
@@ -930,6 +970,7 @@ const s = {
     fontSize: 12,
     cursor: "pointer",
     fontWeight: 600,
+    whiteSpace: "nowrap",
   },
   btnPrint: {
     background: "#eafaf1",
@@ -940,6 +981,7 @@ const s = {
     fontSize: 12,
     cursor: "pointer",
     fontWeight: 600,
+    whiteSpace: "nowrap",
   },
   lockedInfo: {
     background: "#fff8e1",
@@ -979,6 +1021,7 @@ const s = {
     fontSize: 12,
     textTransform: "uppercase",
     letterSpacing: "0.4px",
+    whiteSpace: "nowrap",
   },
   td: {
     padding: "13px 16px",
@@ -987,14 +1030,14 @@ const s = {
     color: "#1a1a2e",
   },
 
-  // Search styles
+  // Search
   searchCard: {
     background: "white",
     borderRadius: 12,
-    padding: "22px 28px",
     marginBottom: 8,
     boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
     border: "1.5px solid #e8f0ff",
+    overflow: "hidden",
   },
   searchTitle: {
     fontSize: 16,
@@ -1003,15 +1046,6 @@ const s = {
     marginBottom: 4,
   },
   searchSub: { fontSize: 13, color: "#7a7a9a", marginBottom: 14, marginTop: 0 },
-  searchEmpty: {
-    textAlign: "center",
-    padding: "16px",
-    color: "#7a7a9a",
-    fontSize: 14,
-    background: "#f8faff",
-    borderRadius: 8,
-  },
-  searchResultCount: { fontSize: 13, color: "#4a4a6a", marginBottom: 10 },
 
   // Divider
   divider: { display: "flex", alignItems: "center", gap: 14, margin: "20px 0" },
